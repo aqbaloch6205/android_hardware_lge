@@ -46,17 +46,19 @@ jobs:
       - name: Link Source and Compile
         run: |
           cd aosp
-          # Put your repo in the expected AOSP location
+          # Link your source
           ln -s ../hardware/lge hardware/lge
           
-          # Now envsetup.sh will exist!
+          # Force the use of the standard AOSP environment setup
+          # This skips the Lineage-specific vendor checks
           source build/envsetup.sh
           
-          # Use a generic target to wake up the build system
-          lunch lineage_arm64-userdebug || lunch aosp_arm64-userdebug
+          # Use a generic AOSP target that exists in every build tree
+          lunch aosp_arm64-trunk_staging-userdebug || lunch aosp_arm64-userdebug
           
           # Compile your master universal binary
           mma lge_hardware_standalone_service -j$(nproc)
+
 
       - name: Upload Standalone Binary
         uses: actions/upload-artifact@v4

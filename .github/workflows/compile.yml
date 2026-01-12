@@ -17,7 +17,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y bc build-essential zip curl libstdc++6 git repo python3
-          # Setup repo launcher in local bin
           mkdir -p ~/bin
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
           chmod a+x ~/bin/repo
@@ -29,13 +28,14 @@ jobs:
           git config --global user.email "build@example.com"
           git config --global user.name "Builder"
           
-          # Using LineageOS 22.1 (Android 15) as a stable compiler base
+          # Initialize LineageOS 22.1 (Android 15)
           repo init -u https://github.com/LineageOS/android.git -b lineage-22.1 --depth=1
           
-          # Syncing ONLY the tools required for Standalone HAL compilation
+          # SYNCING THE ENGINE: Added vendor/lineage and build/soong
           repo sync -c -j$(nproc) --no-tags --no-clone-bundle \
             build/make \
             build/soong \
+            vendor/lineage \
             system/core \
             system/libhidl \
             system/libhwbinder \
@@ -46,19 +46,16 @@ jobs:
       - name: Link Source and Compile
         run: |
           cd aosp
-          # Link your source
           ln -s ../hardware/lge hardware/lge
           
-          # Force the use of the standard AOSP environment setup
-          # This skips the Lineage-specific vendor checks
+          # This will now work because vendor/lineage exists!
           source build/envsetup.sh
           
-          # Use a generic AOSP target that exists in every build tree
-          lunch aosp_arm64-trunk_staging-userdebug || lunch aosp_arm64-userdebug
+          # Use a generic target to set up the architecture
+          lunch lineage_arm64-userdebug
           
-          # Compile your master universal binary
+          # Build your universal service
           mma lge_hardware_standalone_service -j$(nproc)
-
 
       - name: Upload Standalone Binary
         uses: actions/upload-artifact@v4
