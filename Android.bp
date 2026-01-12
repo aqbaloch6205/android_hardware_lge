@@ -1,2 +1,52 @@
 soong_namespace {
+    // This allows the build system to see your custom 'interfaces'
+}
+
+cc_binary {
+    name: "lge_hardware_standalone_service",
+    vendor: true,
+    relative_install_path: "hw",
+    
+    // THE COMPATIBILITY ARMOR: Bakes C++ logic into the file
+    // Essential so it doesn't crash on Android 15/16 symbol mismatches
+    stl: "libc++_static", 
+
+    // RECURSIVE GLOBBING: Automatically finds every .cpp file in your repo
+    srcs: [
+        "**/*.cpp",
+        "**/*.c",
+    ],
+
+    // AUTOMATIC HEADERS: Finds all .h files so you don't get 'file not found'
+    export_include_dirs: ["."],
+    local_include_dirs: [
+        "interfaces/**",
+        "hidl/**",
+        "amplifier/**",
+        "sensors/**",
+        "dac_panel/**",
+        "aidl/**", // Added for newer A15/16 AIDL support
+    ],
+
+    // STATIC LIBS: These are 'baked' into the binary forever
+    static_libs: [
+        "libbase",
+        "libhidlbase",
+        "libutils",
+        "libcutils",
+        // Internal LGE HIDL interfaces
+        "vendor.lge.hardware.audio.dac.control@2.0",
+        // If you have others like amplifier@1.0, add them here
+    ],
+
+    // SHARED LIBS: These are standard core Linux/Android libs found on every version
+    shared_libs: [
+        "liblog",
+        "libc",
+        "libm",
+        "libdl",
+    ],
+
+    // Linker flags to prevent symbol clashes when running on newer ROMs
+    ldflags: ["-Wl,--exclude-libs,ALL"],
 }

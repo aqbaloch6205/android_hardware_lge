@@ -1,0 +1,54 @@
+name: LG V60 Universal Hardware Build
+on:
+  push:
+    branches: [ lineage-23.0 ]
+  workflow_dispatch: # Allows you to start the build manually
+
+jobs:
+  standalone-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Your Hardware Source
+        uses: actions/checkout@v4
+        with:
+          path: hardware/lge
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc build-essential zip curl libstdc++6 git repo python3
+
+      - name: Setup Minimal AOSP Environment
+        run: |
+          mkdir aosp && cd aosp
+          # Initializing with LineageOS 21 (Android 14/15) base for best compatibility
+          repo init -u https://github.com/LineageOS/android.git -b lineage-21 --depth=1
+          
+          # Syncing ONLY the essential folders for HAL/Service compilation
+          repo sync -c -j$(nproc) --no-tags --no-clone-bundle \
+            system/core \
+            system/libhidl \
+            system/libhwbinder \
+            system/logging \
+            hardware/interfaces \
+            prebuilts/clang/host/linux-x86
+
+      - name: Link Source and Compile
+        run: |
+          cd aosp
+          # Moving your repo into the correct AOSP path
+          ln -s ../hardware/lge hardware/lge
+          
+          # Initialize the Android build environment
+          source build/envsetup.sh
+          
+          # Build your master standalone service defined in root Android.bp
+          # Using 'mma' ensures all local dependencies are built
+          mma lge_hardware_standalone_service -j$(nproc)
+
+      - name: Upload Standalone Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: LGE-Hardware-Standalone
+          path: aosp/out/target/product/*/vendor/bin/hw/lge_hardware_standalone_service
+          
