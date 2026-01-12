@@ -28,10 +28,10 @@ jobs:
           git config --global user.email "build@example.com"
           git config --global user.name "Builder"
           
-          # Initialize LineageOS 22.1 (Android 15)
+          # Initialize LineageOS 22.1 (Android 15 base)
           repo init -u https://github.com/LineageOS/android.git -b lineage-22.1 --depth=1
           
-          # SYNCING THE ENGINE: Added vendor/lineage and build/soong
+          # Sync EVERY folder required to avoid envsetup.sh crashes
           repo sync -c -j$(nproc) --no-tags --no-clone-bundle \
             build/make \
             build/soong \
@@ -48,13 +48,14 @@ jobs:
           cd aosp
           ln -s ../hardware/lge hardware/lge
           
-          # This will now work because vendor/lineage exists!
           source build/envsetup.sh
           
-          # Use a generic target to set up the architecture
-          lunch lineage_arm64-userdebug
+          # FIXED LUNCH COMBO FOR ANDROID 15/16:
+          # Format: <product>-<release>-<variant>
+          # We use 'trunk_staging' which is the standard development release config
+          lunch aosp_arm64-trunk_staging-userdebug
           
-          # Build your universal service
+          # Compile your master universal binary
           mma lge_hardware_standalone_service -j$(nproc)
 
       - name: Upload Standalone Binary
