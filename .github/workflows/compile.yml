@@ -17,7 +17,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y bc build-essential zip curl libstdc++6 git repo python3
-          # Download fresh repo launcher to avoid the Distro/Sysadmin error
+          # Setup repo launcher in local bin
           mkdir -p ~/bin
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
           chmod a+x ~/bin/repo
@@ -26,14 +26,16 @@ jobs:
       - name: Setup Minimal AOSP Environment
         run: |
           mkdir aosp && cd aosp
-          git config --global user.email "you@example.com"
-          git config --global user.name "Your Name"
+          git config --global user.email "build@example.com"
+          git config --global user.name "Builder"
           
-          # Use lineage-22.1 (Android 15 base) which is currently active
+          # Using LineageOS 22.1 (Android 15) as a stable compiler base
           repo init -u https://github.com/LineageOS/android.git -b lineage-22.1 --depth=1
           
-          # Sync only what we need for the HAL service
+          # Syncing ONLY the tools required for Standalone HAL compilation
           repo sync -c -j$(nproc) --no-tags --no-clone-bundle \
+            build/make \
+            build/soong \
             system/core \
             system/libhidl \
             system/libhwbinder \
@@ -44,9 +46,16 @@ jobs:
       - name: Link Source and Compile
         run: |
           cd aosp
+          # Put your repo in the expected AOSP location
           ln -s ../hardware/lge hardware/lge
+          
+          # Now envsetup.sh will exist!
           source build/envsetup.sh
-          # Build your master standalone service
+          
+          # Use a generic target to wake up the build system
+          lunch lineage_arm64-userdebug || lunch aosp_arm64-userdebug
+          
+          # Compile your master universal binary
           mma lge_hardware_standalone_service -j$(nproc)
 
       - name: Upload Standalone Binary
